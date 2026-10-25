@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
     console.error("[auth/register] Registration failed because the database could not complete the request.", error);
     return NextResponse.json({
-      error: "Unable to create your account because the SQLite database is unavailable. Check DATABASE_URL and run npm.cmd run db:migrate.",
+      error: "Unable to create your account because the database is unavailable. Check the Neon DATABASE_URL configuration.",
     }, { status: 503 });
   }
 }

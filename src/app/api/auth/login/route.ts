@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("[auth/login] Sign-in failed because the database could not complete the request.", error);
     return NextResponse.json({
-      error: "Unable to access the SQLite database. Check DATABASE_URL and run npm.cmd run db:migrate.",
+      error: "Unable to access the database. Check the Neon DATABASE_URL configuration.",
     }, { status: 503 });
   }
 }

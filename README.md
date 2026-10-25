@@ -1,54 +1,57 @@
 # StatVerse
 
-StatVerse is a full-stack statistical analysis platform built with Next.js App Router, React, TypeScript, Prisma, and SQLite. It includes authenticated analysis, dataset persistence, hypothesis testing, regression, history, reports, and learning tools.
+StatVerse is a full-stack statistical analysis platform built with Next.js App Router, React, TypeScript, Prisma, and Neon PostgreSQL. It includes authenticated analysis, dataset persistence, hypothesis testing, regression, history, reports, and learning tools.
 
 ## Requirements
 
 - Node.js 20.19 or later (required by Prisma 7; Next.js 16 requires 20.9)
-- No database server is required. SQLite stores data in a local file.
+- A Neon PostgreSQL project
 
 ## Local setup
 
 1. Install dependencies: `npm install`
 2. Create `.env` from the example:
 
-   ```bash
-   cp .env.example .env
+   ```powershell
+   Copy-Item .env.example .env
    ```
 
-   On Windows PowerShell, use `Copy-Item .env.example .env`.
-3. Set `SESSION_SECRET` in `.env` to a random secret of at least 32 characters. The example `DATABASE_URL` uses a local SQLite file and normally needs no changes.
-4. Generate Prisma Client and apply migrations:
+3. In Neon, create a separate development database or branch. Set the environment variables described below in `.env`; use its pooled URL for `DATABASE_URL` and its direct (non-pooled) URL for `DIRECT_URL`.
+4. Generate Prisma Client and apply migrations to the development database:
 
-   ```bash
-   npm run db:generate
-   npm run db:migrate
+   ```powershell
+   npm.cmd run db:generate
+   npm.cmd run db:migrate
    ```
 
-5. Start or restart the app: `npm run dev`, then open http://localhost:3000.
-6. Choose **Create account** to register. Accounts from the former localStorage demo are not present in the database.
+5. Start the app with `npm.cmd run dev`, then open http://localhost:3000.
+6. Choose **Create account** to register.
 
-### Windows PowerShell
+Do not point development migration commands at a production database.
 
-If PowerShell reports that `npm.ps1` cannot run because script execution is disabled, use the Windows command launcher (`npm.cmd`) instead:
+## Neon and Vercel environment variables
 
-```powershell
-npm.cmd install
-npm.cmd run db:generate
-npm.cmd run db:migrate
-npm.cmd run dev
-```
+In Neon, copy the connection strings from the project dashboard. In Vercel, open **Project → Settings → Environment Variables** and add the following values for the appropriate environments:
 
-For production deployments, set the same environment variables, run `npm run db:deploy`, then `npm run build` and `npm start`.
+- `DATABASE_URL`: Neon pooled connection string (the hostname normally contains `-pooler`). Used by application requests through the Neon serverless adapter.
+- `DIRECT_URL`: Neon direct, non-pooled connection string. Used by Prisma migration commands, which need a direct database connection.
+- `SESSION_SECRET`: a private random value of at least 32 characters. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
 
-## Environment variables
+Keep these values server-side. Do not use `NEXT_PUBLIC_` prefixes, commit `.env`, or paste credentials into source code. `.env` is ignored by Git. Use distinct Neon branches/databases for development and production.
 
-- `DATABASE_URL`: SQLite file URL. The default `file:./prisma/statverse.db` stores the database locally in the Prisma folder.
-- `SESSION_SECRET`: random secret used to sign the HttpOnly authentication cookie. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+## Safe PostgreSQL migration
 
-The production build runs `prisma generate`. Database migrations are committed under `prisma/migrations`. The SQLite database file is local and ignored by git.
+The previous local database is `prisma/statverse.db`. It and the original SQLite migration history under `prisma/migrations/` are retained and are not used by the PostgreSQL migration configuration. PostgreSQL has its own migration history under `prisma/migrations-postgresql/`; the PostgreSQL baseline was generated from the current Prisma schema.
 
-The previous demo stored accounts and analyses only in browser `localStorage`; that data is not automatically imported into SQLite. Create a new account after setup and retain/export any demo-only records before switching.
+Before applying the baseline to any Neon database, inspect that database's existing tables and migration state. Do not assume it is empty. If it already contains application tables or data, stop and compare its schema with the Prisma schema before applying anything. Never run `prisma migrate reset` or apply the SQLite migration to Neon.
+
+After confirming the intended Neon development database is empty, apply migrations there using `npm.cmd run db:migrate`. Review and test that result before applying the committed PostgreSQL migrations to the production Neon database with `npm.cmd run db:deploy`. Vercel builds generate Prisma Client; migrations should be run as a deliberate deployment step, not on each serverless invocation.
+
+The SQLite database is preserved as a backup; its user and application records are not automatically copied to Neon. Data transfer needs a separately reviewed, non-destructive import plan.
+
+## Build and deployment
+
+The build runs `prisma generate` before `next build`. In Vercel, configure `DATABASE_URL`, `DIRECT_URL`, and `SESSION_SECRET`, then deploy. Apply reviewed PostgreSQL migrations before directing users to the deployed app. Do not claim deployment or remote database migration succeeded until the deployed app and database have actually been checked.
 
 ## Application routes
 

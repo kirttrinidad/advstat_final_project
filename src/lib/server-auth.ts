@@ -30,7 +30,7 @@ export function assertSessionConfiguration(): void {
 
 export function authConfigurationError(): string | null {
   if (!process.env.DATABASE_URL) {
-    return "The database is not configured. Set the SQLite DATABASE_URL in .env and run npm.cmd run db:migrate.";
+    return "The database is not configured. Set the Neon DATABASE_URL in .env.";
   }
   if (process.env.NODE_ENV === "production" && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) {
     return "SESSION_SECRET is missing or too short. Set a random secret of at least 32 characters in .env.";
