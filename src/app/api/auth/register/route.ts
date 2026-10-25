@@ -29,7 +29,15 @@ export async function POST(request: Request) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
-    console.error("[auth/register] Registration failed because the database could not complete the request.", error);
+    const errorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "string" &&
+      /^P\d{4}$/.test(error.code)
+        ? error.code
+        : "unclassified";
+    console.error(`[auth/register] Registration failed (database error category: ${errorCode}).`);
     return NextResponse.json({
       error: "Unable to create your account because the database is unavailable. Check the Neon DATABASE_URL configuration.",
     }, { status: 503 });
