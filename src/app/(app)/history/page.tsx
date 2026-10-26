@@ -17,12 +17,16 @@ export default function HistoryPage() {
     if (!user) return;
     apiRequest<{ analyses: StoredAnalysis[] }>("/api/analyses").then(({ analyses }) => setItems(analyses.map((x) => ({
       id: x.id, type: x.type, name: x.title, date: new Date(x.createdAt).toLocaleDateString(),
-      summary: x.type === "Z-test" ? `Z = ${Number(x.results.z).toFixed(3)}, p = ${Number(x.results.p).toFixed(4)}` : String(x.results.equation ?? ""),
+      summary: x.type.includes("Z-test")
+        ? `Z = ${Number(x.results.z).toFixed(3)}, p = ${Number(x.results.p).toFixed(4)}`
+        : x.type.includes("T-test")
+          ? `t = ${Number(x.results.t).toFixed(3)}, p = ${Number(x.results.p).toFixed(4)}`
+          : String(x.results.equation ?? ""),
       input: x.inputData,
     })))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Unable to load analysis history."));
   }, [user]);
 
-  const open = (x: HistoryItem) => { save("sv_open", x); router.push(x.type === "Z-test" ? "/hypothesis" : "/regression"); };
+  const open = (x: HistoryItem) => { save("sv_open", x); router.push(x.type.includes("Z-test") || x.type.includes("T-test") ? "/hypothesis" : "/regression"); };
   const del = async (id: string) => {
     setError("");
     try { await apiRequest("/api/analyses", { method: "DELETE", body: JSON.stringify({ id }) }); setItems((current) => current.filter((x) => x.id !== id)); }

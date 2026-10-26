@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { getSafeDatabaseDiagnostic } from "@/lib/database-diagnostics";
 import { getPrisma } from "@/lib/prisma";
 import { authConfigurationError, setSession } from "@/lib/server-auth";
 
@@ -19,25 +20,21 @@ export async function POST(request: Request) {
   const { name, password, remember } = parsed.data;
   const email = parsed.data.email.toLowerCase();
   const passwordHash = await bcrypt.hash(password, 12);
+  let failureStage = "prisma-initialize";
   try {
     const prisma = getPrisma();
+    failureStage = "create-user";
     const user = await prisma.user.create({ data: { name, email, passwordHash } });
+    failureStage = "create-activity";
     await prisma.activity.create({ data: { userId: user.id, description: "Created an account" } });
+    failureStage = "set-session";
     await setSession(user.id, remember);
     return NextResponse.json({ user: { id: user.id, name: user.name, email: user.email } }, { status: 201 });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
     }
-    const errorCode =
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      typeof error.code === "string" &&
-      /^P\d{4}$/.test(error.code)
-        ? error.code
-        : "unclassified";
-    console.error(`[auth/register] Registration failed (database error category: ${errorCode}).`);
+    console.error(`[auth/register] Registration failed at ${failureStage}.`, getSafeDatabaseDiagnostic(error));
     return NextResponse.json({
       error: "Unable to create your account because the database is unavailable. Check the Neon DATABASE_URL configuration.",
     }, { status: 503 });
