@@ -30,6 +30,19 @@ export default function RegressionPage() {
   const pn = predict === "" ? NaN : parseFloat(predict);
   const px = Number.isFinite(pn) ? pn : undefined;
   const calc = (t: string) => { setRun(t); setSaved(false); };
+  const loadSample = () => {
+    const count = 8 + Math.floor(Math.random() * 5);
+    const direction = Math.random() < 0.5 ? -1 : 1;
+    const slope = 3 + Math.random() * 5;
+    const intercept = 30 + Math.random() * 40;
+    const sample = Array.from({ length: count }, (_, i) => {
+      const x = i + 1;
+      const y = intercept + direction * slope * x + (Math.random() - 0.5) * slope * 0.6;
+      return `${x},${y.toFixed(2)}`;
+    }).join("\n");
+    setText(sample);
+    calc(sample);
+  };
   const upload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -65,7 +78,7 @@ export default function RegressionPage() {
           <textarea id="rd" value={text} onChange={(e) => setText(e.target.value)} />
           <div className="row" style={{ marginTop: 10 }}>
             <button className="btn" onClick={() => calc(text)}>Calculate</button>
-            <button className="btn g" onClick={() => { setText(SAMPLE); calc(SAMPLE); }}>Load sample</button>
+            <button className="btn g" onClick={loadSample}>Load sample</button>
           </div>
           <label htmlFor="rf">Upload CSV</label><input id="rf" type="file" accept=".csv,.txt" onChange={upload} />
           <label htmlFor="rp">Predict Y for X =</label><input id="rp" type="number" step="any" value={predict} onChange={(e) => setPredict(e.target.value)} />
